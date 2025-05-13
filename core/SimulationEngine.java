@@ -90,7 +90,7 @@ public class SimulationEngine {
                 }
                 
                 // Si usa Round Robin, verificar quantum
-                else if (scheduler instanceof RoundRobinScheduler &&
+                if (scheduler instanceof RoundRobinScheduler &&
                         runningProcess.schedulingData.quantum != null) {
                     
                     // Decrementar contador del quantum
@@ -99,7 +99,7 @@ public class SimulationEngine {
                     
                     // Si se acabó el quantum pero aún tiene tiempo de CPU
                     if (remainingQuantum <= 0) {
-                        Logger.log("Proceso " + runningProcess.pid + " agotó su quantum");
+                        Logger.log("Proceso " + runningProcess.pid + " agotó su quantum (Round Robin)");
                         // Resetear quantum y poner al final de la cola
                         RoundRobinScheduler rr = (RoundRobinScheduler) scheduler;
                         runningProcess.schedulingData.quantum = rr.getQuantum();
@@ -107,6 +107,27 @@ public class SimulationEngine {
                         
                         readyProcesses.add(runningProcess);
                         scheduler.addProcess(runningProcess);
+                        runningProcess = null;
+                    }
+                }
+                // Si usa Cola Multinivel, verificar quantum y preemption
+                else if (scheduler instanceof MultilevelQueueScheduler) {
+                    MultilevelQueueScheduler mlq = (MultilevelQueueScheduler) scheduler;
+                    // Actualizar tiempos para este proceso
+                    mlq.updateProcessTimes(runningProcess);
+                    
+                    // Verificar si debe ser interrumpido
+                    if (mlq.shouldPreempt(runningProcess)) {
+                        Logger.log("Proceso " + runningProcess.pid + " agotó su quantum (Cola Multinivel)");
+                        runningProcess.state = ProcessState.READY;
+                        readyProcesses.add(runningProcess);
+                        scheduler.addProcess(runningProcess);
+                        runningProcess = null;
+                    }
+                    // Verificar si se ha completado 
+                    else if (mlq.isProcessComplete(runningProcess)) {
+                        Logger.log("Proceso " + runningProcess.pid + " completó su ejecución");
+                        completeProcess(runningProcess);
                         runningProcess = null;
                     }
                 }

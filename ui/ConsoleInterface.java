@@ -238,6 +238,10 @@ public class ConsoleInterface {
             System.out.println("Proceso no creado.");
             return;
         }
+
+        System.out.print("Burst Time (tiempo de CPU necesario): ");
+        int burstTime = scanner.nextInt();
+        scanner.nextLine(); // Limpiar buffer
         
         // Solo pedimos prioridad si usamos Cola Multinivel
         if (scheduler instanceof MultilevelQueueScheduler) {
@@ -261,14 +265,13 @@ public class ConsoleInterface {
         
         PCB p = pm.createProcess(pri, mem);
         p.schedulingData = new SchedulingData();
+        
+        // Configurar burst time para todos los algoritmos
+        p.schedulingData.burstTime = burstTime;
+        p.schedulingData.remainingTime = burstTime;
 
         // Configuración específica para Round Robin
         if (scheduler instanceof RoundRobinScheduler) {
-            System.out.print("Burst Time: ");
-            p.schedulingData.burstTime = scanner.nextInt();
-            p.schedulingData.remainingTime = p.schedulingData.burstTime;
-            scanner.nextLine(); // Limpiar buffer
-            
             // Obtener el quantum del scheduler
             RoundRobinScheduler rrScheduler = (RoundRobinScheduler) scheduler;
             p.schedulingData.quantum = rrScheduler.getQuantum();
@@ -279,10 +282,13 @@ public class ConsoleInterface {
             // Asignar nivel de cola basado en prioridad
             if (pri >= 7) { // Prioridad alta (9)
                 p.schedulingData.queueLevel = 2; // Alta prioridad
+                p.schedulingData.quantum = 2;    // Alta prioridad tiene quantum pequeño
             } else if (pri >= 4) { // Prioridad media (5)
                 p.schedulingData.queueLevel = 1; // Media prioridad
+                p.schedulingData.quantum = 4;    // Prioridad media tiene quantum medio
             } else { // Prioridad baja (1)
                 p.schedulingData.queueLevel = 0; // Baja prioridad
+                p.schedulingData.quantum = 6;    // Baja prioridad tiene quantum grande
             }
         }
 

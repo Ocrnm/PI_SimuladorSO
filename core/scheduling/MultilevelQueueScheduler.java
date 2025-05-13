@@ -16,6 +16,11 @@ public class MultilevelQueueScheduler implements Scheduler {
 
     // Tiempo actual del sistema
     private long tiempoActual = 0;
+    
+    // Quantum para cada nivel de prioridad
+    private final int quantumAlta = 2;
+    private final int quantumMedia = 4;
+    private final int quantumBaja = 6;
 
     @Override
     public void addProcess(PCB process) {
@@ -29,12 +34,22 @@ public class MultilevelQueueScheduler implements Scheduler {
             // Simplificamos a solo 3 niveles: 0=baja, 1=media, 2=alta
             if (process.priority >= 7) {
                 data.queueLevel = 2; // Alta prioridad
+                data.quantum = quantumAlta;
             } else if (process.priority >= 4) {
                 data.queueLevel = 1; // Media prioridad
+                data.quantum = quantumMedia;
             } else {
                 data.queueLevel = 0; // Baja prioridad
+                data.quantum = quantumBaja;
             }
-
+            
+            // Importante: asignar burst time y remaining time para garantizar finalización
+            if (data.burstTime == null) {
+                // Si no tiene burst time, asignar uno basado en su prioridad
+                data.burstTime = 5 + (2 - (data.queueLevel != null ? data.queueLevel : 0)) * 3;
+            }
+            
+            data.remainingTime = data.burstTime;
             schedulingDataMap.put(process.pid, data);
         }
 
@@ -70,6 +85,9 @@ public class MultilevelQueueScheduler implements Scheduler {
 
         if (nextProcess != null) {
             nextProcess.state = ProcessState.RUNNING;
+            
+            // Incrementar el tiempo actual del sistema
+            tiempoActual++;
         }
 
         return nextProcess;
@@ -95,5 +113,59 @@ public class MultilevelQueueScheduler implements Scheduler {
     @Override
     public String getName() {
         return "Multilevel Queue Scheduler (3 niveles: 0=Baja, 1=Media, 2=Alta)";
+    }
+    
+    // Este método será llamado por el SimulationEngine en cada tick para actualizar tiempos
+    public void updateProcessTimes(PCB runningProcess) {
+        if (runningProcess != null && runningProcess.schedulingData != null) {
+            SchedulingData data = runningProcess.schedulingData;
+            
+            // Decrementar tiempo restante
+            if (data.remainingTime != null && data.remainingTime > 0) {
+                data.remainingTime--;
+            }
+            
+            // Decrementar quantum si está definido
+            if (data.quantum != null && data.quantum > 0) {
+                data.quantum--;
+            }
+        }
+    }
+    
+    // Verificar si el proceso debe continuar ejecutándose o regresar a la cola
+    public boolean shouldPreempt(PCB process) {
+        if (process == null || process.schedulingData == null) {
+            return false;
+        }
+        
+        SchedulingData data = process.schedulingData;
+        
+        // Preemptar si se acabó el quantum pero aún tiene tiempo de CPU
+        if (data.quantum != null && data.quantum <= 0 && data.remainingTime != null && data.remainingTime > 0) {
+            // Restaurar quantum según nivel
+            switch (data.queueLevel) {
+                case 2:
+                    data.quantum = quantumAlta;
+                    break;
+                case 1:
+                    data.quantum = quantumMedia;
+                    break;
+                case 0:
+                default:
+                    data.quantum = quantumBaja;
+            }
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Verificar si el proceso ha terminado su tiempo de ejecución
+    public boolean isProcessComplete(PCB process) {
+        if (process == null || process.schedulingData == null) {
+            return false;
+        }
+        
+        return process.schedulingData.remainingTime != null && process.schedulingData.remainingTime <= 0;
     }
 }

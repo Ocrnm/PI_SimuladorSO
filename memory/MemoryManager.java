@@ -5,8 +5,8 @@ import java.util.*;
 import models.PCB;
 
 public class MemoryManager {
-    public static final int PAGE_SIZE = 4096; // Tamaño de página en KB (ahora 4MB)
-    public static final int FRAME_COUNT = 1024; // Número de marcos en memoria física (total 4GB)
+    public static final int PAGE_SIZE = 256; // Tamaño de página en KB (256KB)
+    public static final int FRAME_COUNT = 16; // Número de marcos en memoria física (16 marcos)
     
     private final Frame[] frames;
     private final Map<Integer, List<Page>> processPages; // PID -> Lista de páginas
