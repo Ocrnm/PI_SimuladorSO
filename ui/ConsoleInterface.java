@@ -17,45 +17,80 @@ public class ConsoleInterface {
 
     public void start() {
         while (true) {
+            // Verificar si hay procesos activos
+            List<PCB> procesosActivos = pm.getActiveProcesses();
+            boolean hayProcesos = !procesosActivos.isEmpty();
+
             System.out.println("\n=== MENÚ ===");
             System.out.println("1. Crear proceso");
-            System.out.println("2. Suspender proceso");
-            System.out.println("3. Reanudar proceso");
-            System.out.println("4. Terminar proceso");
-            System.out.println("5. Listar procesos");
-            System.out.println("6. Mostrar memoria disponible");
-            System.out.println("7. Salir");
+            
+            // Mostrar opciones adicionales solo si hay procesos
+            if (hayProcesos) {
+                System.out.println("2. Suspender proceso");
+                System.out.println("3. Reanudar proceso");
+                System.out.println("4. Terminar proceso");
+                System.out.println("5. Listar procesos");
+            }
+            
+            System.out.println((hayProcesos ? "6" : "2") + ". Mostrar memoria disponible");
+            System.out.println((hayProcesos ? "7" : "3") + ". Salir");
+            
             System.out.print("Opción: ");
-
             int op = scanner.nextInt();
             scanner.nextLine(); // Limpiar buffer
 
-            switch (op) {
-                case 1 -> crearProceso();
-                case 2 -> {
-                    listarProcesos();
-                    int pid = promptPid();
-                    if (pid != -1) pm.suspendProcess(pid);
-                }
-                case 3 -> {
-                    listarProcesos();
-                    int pid = promptPid();
-                    if (pid != -1) pm.resumeProcess(pid);
-                }
-                case 4 -> {
-                    listarProcesos();
-                    int pid = promptPid();
-                    if (pid != -1) {
-                        PCB process = pm.getProcess(pid);
-                        rm.releaseResources(process); // Liberar recursos antes de terminar
-                        pm.terminateProcess(pid, "Usuario");
+            if (hayProcesos) {
+                switch (op) {
+                    case 1 -> crearProceso();
+                    case 2 -> {
+                        listarProcesos();
+                        int pid = promptPid();
+                        if (pid != -1) pm.suspendProcess(pid);
                     }
+                    case 3 -> {
+                        listarProcesos();
+                        int pid = promptPid();
+                        if (pid != -1) pm.resumeProcess(pid);
+                    }
+                    case 4 -> {
+                        listarProcesos();
+                        int pid = promptPid();
+                        if (pid != -1) {
+                            terminarProceso(pid);
+                        }
+                    }
+                    case 5 -> listarProcesos();
+                    case 6 -> mostrarMemoria();
+                    case 7 -> System.exit(0);
+                    default -> System.out.println("Opción inválida");
                 }
-                case 5 -> listarProcesos();
-                case 6 -> mostrarMemoria();
-                case 7 -> System.exit(0);
-                default -> System.out.println("Opción inválida");
+            } else {
+                // Menú simplificado cuando no hay procesos
+                switch (op) {
+                    case 1 -> crearProceso();
+                    case 2 -> mostrarMemoria();
+                    case 3 -> System.exit(0);
+                    default -> System.out.println("Opción inválida");
+                }
             }
+        }
+    }
+    
+    // Método para terminar un proceso adecuadamente
+    private void terminarProceso(int pid) {
+        PCB process = pm.getProcess(pid);
+        if (process != null) {
+            // Primero quitamos del scheduler
+            scheduler.removeProcess(process);
+            
+            // Luego liberamos recursos
+            rm.releaseResources(process);
+            
+            // Finalmente lo marcamos como terminado
+            pm.terminateProcess(pid, "Usuario");
+            
+            System.out.println("Proceso " + pid + " terminado y recursos liberados.");
+            System.out.println("Memoria liberada: " + process.requiredMemory + " MB");
         }
     }
 
@@ -92,12 +127,22 @@ public class ConsoleInterface {
         
         // Solo pedimos prioridad si usamos Cola Multinivel
         if (scheduler instanceof MultilevelQueueScheduler) {
-            System.out.print("Prioridad (0-9): ");
+            System.out.println("Prioridad: 0=Baja, 1=Media, 2=Alta");
+            System.out.print("Ingrese nivel de prioridad (0-2): ");
             pri = scanner.nextInt();
             scanner.nextLine(); // Limpiar buffer
+            
+            // Validar la prioridad
+            if (pri < 0 || pri > 2) {
+                System.out.println("Prioridad inválida. Se asignará prioridad 0 (Baja)");
+                pri = 0;
+            }
+            
+            // Convertir la prioridad simplificada a escala 0-9 para compatibilidad
+            pri = pri == 0 ? 1 : (pri == 1 ? 5 : 9);
         } else {
-            // Para Round Robin no mostramos mensaje de prioridad
-            pri = 0; // Valor por defecto
+            // Para Round Robin usamos prioridad por defecto
+            pri = 0;
         }
         
         PCB p = pm.createProcess(pri, mem);
@@ -118,11 +163,11 @@ public class ConsoleInterface {
         // Configuración para Cola Multinivel
         if (scheduler instanceof MultilevelQueueScheduler) {
             // Asignar nivel de cola basado en prioridad
-            if (pri >= 7) {
+            if (pri >= 7) { // Prioridad alta (9)
                 p.schedulingData.queueLevel = 2; // Alta prioridad
-            } else if (pri >= 4) {
+            } else if (pri >= 4) { // Prioridad media (5)
                 p.schedulingData.queueLevel = 1; // Media prioridad
-            } else {
+            } else { // Prioridad baja (1)
                 p.schedulingData.queueLevel = 0; // Baja prioridad
             }
         }
@@ -163,7 +208,7 @@ public class ConsoleInterface {
                     "PID", "Estado", "Memoria", "Burst Time", "Remaining Time");
             } else {
                 System.out.printf("%-5s %-10s %-10s %-10s %s%n", 
-                    "PID", "Estado", "Prioridad", "Memoria", "Cola");
+                    "PID", "Estado", "Memoria", "Prioridad", "Cola");
             }
             
             System.out.println("-".repeat(70));
@@ -178,11 +223,21 @@ public class ConsoleInterface {
                         p.pid, p.state, p.requiredMemory, burstTime, remainingTime);
                 } else {
                     // Para Cola Multinivel
+                    String prioridad;
+                    if (p.priority >= 7) {
+                        prioridad = "Alta (9)";
+                    } else if (p.priority >= 4) {
+                        prioridad = "Media (5)";
+                    } else {
+                        prioridad = "Baja (1)";
+                    }
+                    
                     String queueLevel = p.schedulingData != null && p.schedulingData.queueLevel != null ? 
                         (p.schedulingData.queueLevel == 2 ? "Alta" : 
                          p.schedulingData.queueLevel == 1 ? "Media" : "Baja") : "N/A";
-                    System.out.printf("%-5d %-10s %-10d %-10d %s%n", 
-                        p.pid, p.state, p.priority, p.requiredMemory, queueLevel);
+                    
+                    System.out.printf("%-5d %-10s %-10d %-10s %s%n", 
+                        p.pid, p.state, p.requiredMemory, prioridad, queueLevel);
                 }
             }
         }

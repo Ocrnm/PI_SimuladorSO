@@ -1,18 +1,16 @@
 package core;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import models.*;
 
 public class ResourceManager {
-    private final Resource cpu = new Resource("CPU");
     private final int totalMemory = 4096;
     private int usedMemory = 0;
-    private final List<Resource> availableResources = new ArrayList<>();
+    private final Map<Integer, Integer> processoMemoryMap = new HashMap<>();
 
     public ResourceManager() {
-        // Inicializar recursos disponibles
-        availableResources.add(cpu);
+        // Constructor vacío
     }
 
     public boolean requestResources(PCB process) {
@@ -24,10 +22,11 @@ public class ResourceManager {
 
         // Asignar memoria
         usedMemory += process.requiredMemory;
+        processoMemoryMap.put(process.pid, process.requiredMemory);
         
-        // Asignar una copia del CPU (simulando multitarea)
-        Resource cpuInstance = new Resource("CPU-" + process.pid);
-        process.assignedResources.add(cpuInstance);
+        // Registramos la asignación
+        Resource memory = new Resource("Memoria-" + process.requiredMemory + "MB");
+        process.assignedResources.add(memory);
         
         Logger.log("Recursos asignados al Proceso " + process.pid + 
                   " (Memoria: " + process.requiredMemory + "MB)");
@@ -35,10 +34,17 @@ public class ResourceManager {
     }
 
     public void releaseResources(PCB process) {
-        usedMemory -= process.requiredMemory;
+        // Verificar que el proceso tenga recursos asignados
+        Integer memoryAssigned = processoMemoryMap.get(process.pid);
+        if (memoryAssigned != null) {
+            usedMemory -= memoryAssigned;
+            processoMemoryMap.remove(process.pid);
+            Logger.log("Recursos liberados por el Proceso " + process.pid + 
+                      " (Memoria recuperada: " + memoryAssigned + "MB)");
+        }
+        
+        // Limpiar la lista de recursos asignados al proceso
         process.assignedResources.clear();
-        Logger.log("Recursos liberados por el Proceso " + process.pid + 
-                  " (Memoria recuperada: " + process.requiredMemory + "MB)");
     }
 
     public int getAvailableMemory() {
@@ -47,6 +53,10 @@ public class ResourceManager {
     
     public int getTotalMemory() {
         return totalMemory;
+    }
+    
+    public int getMemoryUsedByProcess(int pid) {
+        return processoMemoryMap.getOrDefault(pid, 0);
     }
 }
 
