@@ -28,7 +28,12 @@ public class Main {
             default:
                 throw new IllegalArgumentException("Algoritmo no válido");
         }
+        
+        System.out.println("\nIniciando simulador...");
+        System.out.println("Use la opción 'Avanzar simulación' para controlar el progreso");
+        System.out.println("Los procesos pasarán por estados: CREACIÓN → NEW → READY → RUNNING");
 
-        new ConsoleInterface(scheduler).start();
+        ConsoleInterface ui = new ConsoleInterface(scheduler);
+        ui.start();
     }
 }
