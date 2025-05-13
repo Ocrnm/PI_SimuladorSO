@@ -1,12 +1,12 @@
 package memory;
 
 import core.Logger;
-import models.PCB;
 import java.util.*;
+import models.PCB;
 
 public class MemoryManager {
-    public static final int PAGE_SIZE = 256; // Tamaño de página en KB
-    public static final int FRAME_COUNT = 16; // Número de marcos en memoria física
+    public static final int PAGE_SIZE = 4096; // Tamaño de página en KB (ahora 4MB)
+    public static final int FRAME_COUNT = 1024; // Número de marcos en memoria física (total 4GB)
     
     private final Frame[] frames;
     private final Map<Integer, List<Page>> processPages; // PID -> Lista de páginas
@@ -17,7 +17,7 @@ public class MemoryManager {
             frames[i] = new Frame(i);
         }
         processPages = new HashMap<>();
-        Logger.log("Sistema de memoria inicializado: " + FRAME_COUNT + " marcos de " + PAGE_SIZE + "KB");
+        Logger.log("Sistema de memoria inicializado: " + FRAME_COUNT + " marcos de " + PAGE_SIZE + "KB (Total: " + getTotalMemory() + "MB)");
     }
     
     public boolean allocateMemory(PCB process) {

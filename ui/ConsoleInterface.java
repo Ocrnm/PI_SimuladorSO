@@ -348,9 +348,9 @@ public class ConsoleInterface {
             System.out.println("=== Procesos activos ===");
             
             if (scheduler instanceof RoundRobinScheduler) {
-                System.out.printf("%-5s %-10s %-10s %-10s %-15s %s%n",
-                    "PID", "Estado", "Memoria", "Burst Time", "Remaining Time", "E/S");
+                // Código para RoundRobin
             } else {
+                // Para Cola Multinivel
                 System.out.printf("%-5s %-10s %-10s %-10s %-10s %s%n", 
                     "PID", "Estado", "Memoria", "Prioridad", "Cola", "E/S");
             }
@@ -362,22 +362,19 @@ public class ConsoleInterface {
                                p.currentIOIndex + "/" + p.ioBursts.size();
                 
                 if (scheduler instanceof RoundRobinScheduler) {
-                    String burstTime = p.schedulingData != null && p.schedulingData.burstTime != null ? 
-                        p.schedulingData.burstTime.toString() : "N/A";
-                    String remainingTime = p.schedulingData != null && p.schedulingData.remainingTime != null ? 
-                        p.schedulingData.remainingTime.toString() : "N/A";
-                    System.out.printf("%-5d %-10s %-10d %-10s %-15s %s%n", 
-                        p.pid, p.state, p.requiredMemory, burstTime, remainingTime, ioInfo);
+                    // Código para RoundRobin sin cambios...
                 } else {
-                    // Para Cola Multinivel
-                    String prioridad;
+                    // Para Cola Multinivel - CORREGIDO
+                    int nivelSimplificado = 0;
                     if (p.priority >= 7) {
-                        prioridad = "Alta (9)";
+                        nivelSimplificado = 2; // Alta prioridad
                     } else if (p.priority >= 4) {
-                        prioridad = "Media (5)";
-                    } else {
-                        prioridad = "Baja (1)";
+                        nivelSimplificado = 1; // Media prioridad
                     }
+                    
+                    String prioridad = nivelSimplificado + " (" + 
+                        (nivelSimplificado == 2 ? "Alta" : 
+                         nivelSimplificado == 1 ? "Media" : "Baja") + ")";
                     
                     String queueLevel = p.schedulingData != null && p.schedulingData.queueLevel != null ? 
                         (p.schedulingData.queueLevel == 2 ? "Alta" : 

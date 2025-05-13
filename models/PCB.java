@@ -62,7 +62,15 @@ public class PCB {
         // Información adicional según el algoritmo
         if (schedulingData != null) {
             if (schedulingData.queueLevel != null) {
-                sb.append(" | Prioridad: ").append(priority);
+                sb.append(" | Prioridad: ");
+                if (priority >= 7) {
+                    sb.append("2 (Alta)");
+                } else if (priority >= 4) {
+                    sb.append("1 (Media)");
+                } else {
+                    sb.append("0 (Baja)");
+                }
+                
                 sb.append(" | Cola: ");
                 switch (schedulingData.queueLevel) {
                     case 2: sb.append("Alta"); break;
@@ -74,7 +82,10 @@ public class PCB {
             
             if (schedulingData.burstTime != null) {
                 sb.append(" | Burst Time: ").append(schedulingData.burstTime);
-                sb.append(" | Remaining: ").append(schedulingData.remainingTime);
+                // Asegurar que el tiempo restante nunca sea negativo para mostrar
+                int remainingTime = schedulingData.remainingTime != null ? 
+                    Math.max(0, schedulingData.remainingTime) : 0;
+                sb.append(" | Remaining: ").append(remainingTime);
                 sb.append(" | Quantum: ").append(schedulingData.quantum);
             }
         }

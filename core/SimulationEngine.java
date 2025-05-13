@@ -1,9 +1,8 @@
 package core;
 
+import core.scheduling.*;
 import java.util.*;
 import models.*;
-import core.scheduling.*;
-import memory.*;
 
 public class SimulationEngine {
     private final Scheduler scheduler;
@@ -83,9 +82,13 @@ public class SimulationEngine {
                 // Verificar si se completó
                 if (runningProcess.schedulingData.remainingTime <= 0) {
                     Logger.log("Proceso " + runningProcess.pid + " completó su ejecución");
+                    // Asegurar que remainingTime no sea negativo
+                    runningProcess.schedulingData.remainingTime = 0;
                     completeProcess(runningProcess);
                     runningProcess = null;
+                    return; // Importante: salir para evitar más procesamiento
                 }
+                
                 // Si usa Round Robin, verificar quantum
                 else if (scheduler instanceof RoundRobinScheduler &&
                         runningProcess.schedulingData.quantum != null) {
